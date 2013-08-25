@@ -27,7 +27,7 @@ module EM::FTPD
     end
 
     def self.start(config_path = nil, configurator = EM::FTPD::Configurator, &block)
-      self.instance.start config_path, &block
+      self.instance.start config_path, configurator, &block
     end
 
     def start(config_path = nil, configurator = EM::FTPD::Configurator, &block)
