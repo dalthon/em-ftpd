@@ -26,22 +26,38 @@ module EM::FTPD
       end
     end
 
-    def self.start(config_path)
-      self.instance.start(config_path)
+    def self.start(config_path = nil, configurator = EM::FTPD::Configurator, &block)
+      self.instance.start config_path, &block
     end
 
-    def start(config_path)
-      config_data = File.read(config_path)
-      config = EM::FTPD::Configurator.new
-      config.instance_eval(config_data)
+    def start(config_path = nil, configurator = EM::FTPD::Configurator, &block)
+      config = nil
+
+      if config_path
+        config_data = File.read(config_path)
+        config = configurator.new
+        config.instance_eval(config_data)
+      else
+        if block_given?
+          config = configurator.new
+          yield config
+        else
+          raise ArgumentError, 'Missing config path or block'
+        end
+      end
+
+      run config
+    end
+
+    def run(config)
       config.check!
       update_procline(config.name)
 
       EventMachine.epoll
 
-      EventMachine::run do
+      EventMachine.run do
         puts "Starting ftp server on 0.0.0.0:#{config.port}"
-        EventMachine::start_server("0.0.0.0", config.port, EM::FTPD::Server, config.driver, *config.driver_args)
+        EventMachine.start_server("0.0.0.0", config.port, EM::FTPD::Server, config.driver, *config.driver_args)
 
         daemonise!(config)
         change_gid(config.gid)
